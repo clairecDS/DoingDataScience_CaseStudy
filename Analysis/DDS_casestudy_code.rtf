@@ -1,0 +1,229 @@
+{\rtf1\ansi\ansicpg1252\cocoartf1348\cocoasubrtf170
+{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
+{\colortbl;\red255\green255\blue255;}
+\margl1440\margr1440\vieww11540\viewh8400\viewkind0
+\pard\tx0\tx0\tx0\tx0\tx0\tx0\tx0\tx0\tx0\tx0\tx0\tx10\pardirnatural
+
+\f0\fs24 \cf0 CLAIRE CHU\
+ROUGH DRAFT FOR DDS UNIT 6 CASE STUDY\
+\
+#R Code for Unit 6 Case Study\
+#Merging GDP and Income statistics based on Country Name\
+\
+######PRELIMINARY STEPS\
+#load packages\
+library(repmis)\
+library(RCurl)\
+library(plyr)\
+library(ggplot2)\
+setwd("/Users/macnificent/Desktop")\
+\
+######I. INTRODUCTION TO THE PROBLEM\
+We will explore two datasets; one that details the GDP rankings worldwide and another which details various income statistics for countries around the world. Both datasets will be downloaded raw from http://data.worldbank.org/data-catalog and munged with the code that follows. Once cleaned, we will focus our analysis on the GDP rankings and Income groupings for the top 190 countries worldwide.\
+\
+######II. DOWNLOAD THE FILES\
+#download data\
+site <- "https://d396qusza40orc.cloudfront.net/getdata%2Fdata%2FGDP.csv"\
+download.file(site, destfile = "./GDP.csv")\
+site <- "https://d396qusza40orc.cloudfront.net/getdata%2Fdata%2FEDSTATS_Country.csv"\
+download.file(site, destfile = "./educ.csv")\
+#confirm files are downloaded\
+list.files()\
+cat("Data downloaded to local file")\
+\
+######III. READ THE FILES\
+\
+###GDP DATASET\
+GDP <- read.csv("GDP.csv")\
+head(GDP,10)\
+#it appears that the first 4 rows may be a header, with the column names listed in rows 2-3\
+#we can also see that columns 4-10 may consist of NA columns\
+GDP <- read.csv("GDP.csv", stringsAsFactors=FALSE, header=FALSE)\
+head(GDP)\
+#let's look at a data overview\
+str(GDP)\
+#we can see there are 331 observations and 10 variables\
+GDPdata <- GDP[6:195, 1:5]\
+#this is to eliminate the "header" that was row 1-5, only take the requested top 190 countries and the empty NA columns 5-10\
+head(GDPdata)\
+\
+###EDUCATION&INCOME DATASET\
+edu <- read.csv("educ.csv")\
+head(edu, 10)\
+#it appears that there are column names in row one\
+edu <- read.csv("educ.csv", stringsAsFactors=FALSE, header=TRUE)\
+head(edu)\
+#let's look at a data overview\
+str(edu)\
+#we can see there are 234 observations and 31 variables. \
+\
+cat("Data read into R")\
+\
+######IV. CLEAN THE DATA\
+\
+###GDP DATASET >>>do we need to remove rows since its only the top 190?\
+head(GDPdata)\
+names(GDPdata) <- c ("CountryCode", "GDPRanking","notsure", "CountryName","GDP")\
+#generate column names, we can see column 3 doesn't have an understandable name\
+head(GDPdata)\
+#investigate "notsure" column\
+GDPdata$notsure\
+#they are all "NA"\
+GDPdata2 <- GDPdata[ ,c("CountryCode", "GDPRanking", "CountryName", "GDP")]\
+head(GDPdata2)\
+summary(GDPdata2)\
+#check for any additional NA\
+count(is.na(GDPdata2))\
+#get rid of commas in the GDP category so we can run analysis on the numbers\
+GDPnum <- as.numeric(gsub(",", "", GDPdata2$GDP))\
+GDPdata2$GDPnew <- GDPnum\
+head(GDPdata2)\
+#remove the old GDP column\
+GDPdata3 <- GDPdata2[ ,c("CountryCode", "GDPRanking", "CountryName", "GDPnew")]\
+head(GDPdata3)\
+\
+###EDUCATION&INCOME DATASET\
+#lets investigate these column names\
+names(edu)\
+#based on the column  names, we can eliminate some of the excess data\
+EDUdata <- edu[ ,c("CountryCode", "Long.Name", "Income.Group", "Region", "Short.Name")]\
+summary(EDUdata)\
+#we suspect there are something going on in the "Income.Group" column\
+EDUdata$Income.Group\
+#instead of traditional NA, there are some blank entries in the column. Let's remove these\
+#sort the dataset by income group so that all the blank entries are at the end\
+EDUdata2 <- arrange(EDUdata,desc(Income.Group))\
+#after sorting, it seems like the blank entries begin at row 211. lets remove them.\
+EDUdata3 <- EDUdata2 [1:210, ]\
+EDUdata3\
+#check for any NA in the dataset\
+count(is.na(EDUdata3))\
+\
+summary(EDUdata3)\
+summary(GDPdata3)\
+cat("Data is now clean and ready for merge")\
+######V. MERGE DATA\
+cleanGDPmerge <- merge(GDPdata3, EDUdata3, by="CountryCode", all=TRUE)\
+head(cleanGDPmerge)\
+summary(cleanGDPmerge)\
+#check to see if there were any NAs generated from the merge\
+count(is.na(cleanGDPmerge))\
+#we've got some NAs, let investigate where they live\
+count(is.na(cleanGDPmerge$CountryCode))\
+count(is.na(cleanGDPmerge$GDPRanking))\
+count(is.na(cleanGDPmerge$CountryName))\
+count(is.na(cleanGDPmerge$GDPnew))\
+count(is.na(cleanGDPmerge$Long.Name))\
+count(is.na(cleanGDPmerge$Income.Group))\
+count(is.na(cleanGDPmerge$Region))\
+count(is.na(cleanGDPmerge$Short.Name))\
+#these results make sense since the columns from the GDP dataset only had 190 values, \
+#the columns for the EDU dataset had 210 so there should be about 20 rows with NA. \
+#let's remove the rows where there is an NA in GDP ranking\
+cleanGDPmerge2 <- arrange(cleanGDPmerge,desc(GDPRanking))\
+cleanGDPmerge3 <- cleanGDPmerge2 [1:190, ]\
+summary(cleanGDPmerge3)\
+#now check again for NA\
+count(is.na(cleanGDPmerge3))\
+#it seems there is one NA from an entry that existed in the GDP data but not in the EDU data. \
+#lets find it and investigate it\
+which(is.na(cleanGDPmerge3$Long.Name))\
+cleanGDPmerge3[154,]\
+#we should be cautious about removing this one since it is a GDP ranking. let's leave it for now.\
+\
+summary(cleanGDPmerge3)\
+cat("Data is ready for analysis")\
+######VI. ANALYZE DATA\
+\
+###QUESTION 1\
+#How many of the IDs Match?\
+summary(cleanGDPmerge)\
+duplicated(cleanGDPmerge)\
+#we know that the first dataset had 190 rows and the second dataset had 210 rows\
+#and there are no duplicates, we know that one entry in the GDP countrycode that did not\
+#exist in the EDU countrycode column. Therefore, we had 189 matched out of 190. \
+#our only countrycode that did not match was row 154 "South Sudan". we can tell\
+#this is the case since, all the columns from the EDU dataset for this row are NA\
+\
+###QUESTION 2\
+#Sort the data frame in ascending order by GDP rank. What is the 13th country in the data frame?\
+#first we need to transpose the GDPRanking column into integers so we can sort them\
+cleanGDPmerge3$GDPRanking <- as.integer(cleanGDPmerge3$GDPRanking)\
+cleanGDPmergeRANK <- arrange(cleanGDPmerge3, desc(GDPRanking))\
+#look up the 13th row\
+cleanGDPmergeRANK[13,]\
+#The Country "ST. KITTS AND NEVIS" ranks 178 in GDP.\
+\
+###QUESTION 3\
+#What are the average GDP Rankings for the "High Income: OECD" and "High Income: nonOECD" \
+#groups\
+cleanGDPmergeINC <- arrange(cleanGDPmerge3,desc(Income.Group))\
+#we can see that the "high income: OECD" group exists at [137:166, ]\
+#and "high income: nonOECD exists at [167:189, ]\
+#let's put these into their own data frames\
+HighIncOECD <- cleanGDPmergeINC[137:166, ]\
+HighIncNonOECD <- cleanGDPmergeINC[167:189, ]\
+summary(HighIncOECD)\
+#Average GDP ranking for High Income: OECD is 32.97\
+#Average GDP for High Income: OECD is $1483917\
+summary(HighIncNonOECD)\
+#Average GDP ranking for High Income: Non OECD is 91.91\
+#Average GDP for High Income: Non OECD is $104350\
+\
+###QUESTION 4\
+#Plot the GDP for all the countries. Use ggplot2 to color your plot by Income Group\
+\
+#pull out info we will use for graph\
+#we want the plot to display countries in their rank order\
+graphGDPdata <- cleanGDPmergeRANK[ ,c("CountryCode", "GDPnew", "Income.Group")]\
+#remove the south sudan income.group NA entry\
+graphGDPdata <- graphGDPdata[-60,]\
+#set up the parameters for graphGDP\
+#need to make sure the country code stays in the same order, otherwise, qqplot will plot alphabetically\
+graphGDP <- ggplot(graphGDPdata, aes(reorder(CountryCodeR, GDPnew), GDPnew))\
+#construct a scatter plot with GDP on the y axis and Country Code Ranked by GDP in ascending order\
+#also make sure the points are color coded according to income group\
+#also make sure to scale the y axis by log10\
+#specify the names of axis and legend position\
+graphGDPpoint <- graphGDP + geom_point(aes(colour = Income.Group)) + theme(axis.text.x = element_blank()) + scale_y_log10(labels = NULL) + labs(title = "Top 190 GDPs by Country", x = "Countries in Ascending GDP Rank", y = "GDP (Transformed with log10)") + theme(legend.position = "bottom")\
+#generate scatter plot\
+graphGDPpoint\
+\
+###QUESTION 5\
+#Cut the GDP ranking into 5 quantile groups. make a table versus Income Group. How many countries are Lower Middle income but among the 38 nations with the highest GDP?\
+\
+#let's first look at the ranking quantiles\
+summary(cleanGDPmerge3)\
+#quantiles are 1, 48.25, 95.5, 142.75, 190\
+#slice data according to quantile groups\
+#we will use the cleanGDPmergeRANK data since these are already in order of rank\
+#we have be careful since it is organized in ASCENDING order!\
+\
+\
+FirstQuantileGDPRank <- cleanGDPmergeRANK [144:190, ]\
+#pull only the columns we are interested in to simplify the data\
+FirstQuantileGDPRank2 <-FirstQuantileGDPRank[ c("CountryCode", "GDPRanking", "Income.Group")]\
+#sort them by income group\
+FirstQuantileGDPRankINC<-arrange(FirstQuantileGDPRank2, desc(Income.Group))\
+\
+#repeat for remaining quantiles\
+SecondQuantileGDPRank <- cleanGDPmergeRANK [96:143, ]\
+SecondQuantileGDPRank2 <-SecondQuantileGDPRank[ c("CountryCode", "GDPRanking", "Income.Group")]\
+SecondQuantileGDPRankINC<-arrange(SecondQuantileGDPRank2, desc(Income.Group))\
+ThirdQuantileGDPRank <- cleanGDPmergeRANK [48:95, ]\
+ThirdQuantileGDPRank2 <-ThirdQuantileGDPRank[ c("CountryCode", "GDPRanking", "Income.Group")]\
+ThirdQuantileGDPRankINC<-arrange(ThirdQuantileGDPRank2, desc(Income.Group))\
+FourthQuantileGDPRank <- cleanGDPmergeRANK [1:47, ]\
+FourthQuantileGDPRank2 <-FourthQuantileGDPRank[ c("CountryCode", "GDPRanking", "Income.Group")]\
+FourthQuantileGDPRankINC<-arrange(FourthQuantileGDPRank2, desc(Income.Group))\
+FourthQuantileGDPRank2 <-FourthQuantileGDPRank[ c("CountryCode", "GDPRanking", "Income.Group")]\
+FourthQuantileGDPRankINC<-arrange(FourthQuantileGDPRank2, desc(Income.Group))\
+    \
+#how many countries are low middle income but have the top 38 highest GDP\
+FirstQuantileGDPRankINC\
+#Look at the "lower Middle Income" entries and see which ones exist below the 38th GDP ranking\
+FirstQuantileGDPRankINC[16:20,]\
+#There are only 5 countries that are low middle income in the top 38th GDP rankings\
+                                                                                                                                      \
+##additional research sidenote for curiosity purposes:\
+##what does OECD means and why the OECD countries have the highest GDPs. ...}
