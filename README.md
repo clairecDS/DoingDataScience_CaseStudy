@@ -10,6 +10,8 @@ __________________________
 #####Please access the Raw Data through the Analysis/Data directory
 #####Please access the code .txt file and graph output through the Analysis directory
 -----------------------------
+#PROJECT SUMMARY (see Rmd file for complete analysis and R code)
+-----------------------------
 #I. INTRODUCTION TO THE PROBLEM
 #####We will explore two datasets; one that details the GDP rankings worldwide and another which details various income statistics for countries around the world. Both datasets will be downloaded raw from http://data.worldbank.org/data-catalog and munged with the code that follows. Once cleaned, we will focus our analysis on the GDP rankings and Income groupings for the top 190 countries worldwide.
 --------------------------
