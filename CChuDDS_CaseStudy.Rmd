@@ -268,6 +268,7 @@ graphGDPpoint <- graphGDP + geom_point(aes(colour = Income.Group)) + theme(axis.
 ```{r fig.width=7}
 graphGDPpoint
 ```
+https://github.com/clairecDS/DoingDataScience_CaseStudy/blob/master/Analysis/graphGDPpoint.png?raw=true
 
 #####We can see that with the country data plotted in ascending order by GDP, that our results from Question 3 are accurate. Most of the top ranked countries are from the High Income: OECD class, as mentioned by their average ranking. It is also important to note that the Low Income group is very poorly represented in the top ranks. In fact, the first green point to represent Low Income seems to be located outside the top 25%.
 #####Note: The country of South Sudan contains an "NA" value, in the "income.group" classification. This is because it existed in the pre-merge GDP dataset, but not in the pre-merge EDU dataset. Because of this, it has been removed from this graph as it requires income group classification, but left it in the table below exploring "GDP Rank".
